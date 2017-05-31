@@ -1,0 +1,19 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "jira.moussypad.com"
+Parameters:
+  DomainName:
+    Type: String
+  HostedZoneId:
+    Type: String
+  Origin:
+    Type: String
+Resources:
+  ConfluenceRoute:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Sub jira.${DomainName}.
+      ResourceRecords:
+      - !Ref Origin
+      TTL: 300
+      Type: A

@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: "Infrastructure"
+Parameters:
+  DomainName:
+    Type: String
+  AcmCertificateArn:
+    Type: String
+  ConfluenceIp:
+    Type: String
+  JiraIp:
+    Type: String
+Resources:
+  RootHostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties: 
+      Name: !Ref DomainName
+  WwwMoussypadComStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: [RootHostedZone]
+    Properties:
+      Parameters:
+        DomainName: !Ref DomainName
+        HostedZoneId: !Ref RootHostedZone
+        AcmCertificateArn: !Ref AcmCertificateArn
+      TemplateURL: "www.moussypad.com.yaml"
+  ConfluenceMoussypadComStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: [RootHostedZone]
+    Properties:
+      Parameters:
+        DomainName: !Ref DomainName
+        HostedZoneId: !Ref RootHostedZone
+        Origin: !Ref ConfluenceIp
+      TemplateURL: "confluence.moussypad.com.yaml"
+  JiraMoussypadComStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: [RootHostedZone]
+    Properties:
+      Parameters:
+        DomainName: !Ref DomainName
+        HostedZoneId: !Ref RootHostedZone
+        Origin: !Ref JiraIp
+      TemplateURL: "jira.moussypad.com.yaml"
+    

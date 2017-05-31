@@ -1,0 +1,25 @@
+version: 0.2
+env:
+  variables:
+    S3_BUCKET_FOR_ARTIFACT: ""
+    TEMPLATE: ""
+phases:
+  install:
+    commands:
+      - pip install --upgrade awscli
+  pre_build:
+    commands:
+      - sh ./test-script.sh
+  build:
+    commands:
+      - aws cloudformation package --template src/$TEMPLATE --s3-bucket $S3_BUCKET_FOR_ARTIFACT --output-template post-${TEMPLATE} --kms-key-id 'e163a727-71b7-4da7-bfdc-6e542b71fbbe'
+  # post_build:
+  #   commands:
+  #     - command
+  #     - command
+artifacts:
+  files:
+    - '**/*'
+    # - location
+  # discard-paths: yes
+  # base-directory: location

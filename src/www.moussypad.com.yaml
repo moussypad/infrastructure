@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: www.moussypad.com
+Parameters:
+  DomainName:
+    Type: String
+  HostedZoneId:
+    Type: String
+  AcmCertificateArn: 
+    Type: String
+Mappings:
+  S3WebsiteMap:
+    us-east-1:
+      S3hostedzoneID: Z3AQBSTGFYJSTF
+      endpoint: s3-website-us-east-1.amazonaws.com
+    us-west-1:
+      S3hostedzoneID: Z2F56UZL2M1ACD
+      endpoint: s3-website-us-west-1.amazonaws.com
+    us-west-2:
+      S3hostedzoneID: Z3BJ6K6RIION7M
+      endpoint: s3-website-us-west-2.amazonaws.com
+    eu-west-1:
+      S3hostedzoneID: Z1BKCTXD74EZPE
+      endpoint: s3-website-eu-west-1.amazonaws.com
+    ap-southeast-1:
+      S3hostedzoneID: Z3O0J2DXBE1FTB
+      endpoint: s3-website-ap-southeast-1.amazonaws.com
+    ap-southeast-2:
+      S3hostedzoneID: Z1WCIGYICN2BYD
+      endpoint: s3-website-ap-southeast-2.amazonaws.com
+    ap-northeast-1:
+      S3hostedzoneID: Z2M4EHUR26P7ZW
+      endpoint: s3-website-ap-northeast-1.amazonaws.com
+    sa-east-1:
+      S3hostedzoneID: Z31GFT0UA1I2HV
+      endpoint: s3-website-sa-east-1.amazonaws.com
+Resources:
+  RootBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      AccessControl: BucketOwnerFullControl
+      BucketName: !Ref DomainName
+      WebsiteConfiguration:
+        RedirectAllRequestsTo:
+          HostName: !Ref WWWBucket
+  WWWBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      AccessControl: PublicRead
+      BucketName: !Sub www.${DomainName}
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: 404.html
+  WWWBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WWWBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - 
+            Effect: Allow
+            Principal: "*"
+            Action:
+              - "s3:GetObject"
+            Resource: !Sub "arn:aws:s3:::${WWWBucket}/*"
+  WWWCloudFront:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Aliases:
+          - !Ref DomainName
+          - !Sub www.${DomainName}
+        Origins:
+          - 
+            DomainName: !Sub
+              - "${WWWBucket}.${Endpoint}"
+              - Endpoint: !FindInMap [ S3WebsiteMap, !Ref 'AWS::Region', endpoint ]
+            Id: !Sub "S3-${DomainName}"
+            CustomOriginConfig:
+              HTTPPort: 80
+              OriginProtocolPolicy: "http-only"
+        Enabled: true
+        HttpVersion: http2
+        DefaultRootObject: index.html
+        DefaultCacheBehavior:
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          TargetOriginId: !Sub "S3-${DomainName}"
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+            Headers: []
+          DefaultTTL: 86400
+          MinTTL: 0
+          MaxTTL: 31536000
+          SmoothStreaming: false
+          ViewerProtocolPolicy: redirect-to-https
+        CustomErrorResponses:
+          - 
+            ErrorCachingMinTTL: 300
+            ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+        PriceClass: PriceClass_200
+        ViewerCertificate:
+          SslSupportMethod: sni-only
+          AcmCertificateArn: !Ref AcmCertificateArn
+  WWWRoutes:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      RecordSets:
+        - 
+          Name: !Ref DomainName
+          Type: A
+          AliasTarget:
+            HostedZoneId: !Ref HostedZoneId
+            DNSName: !GetAtt WWWCloudFront.DomainName
+        - 
+          Name: !Sub www.${DomainName}.
+          Type: A
+          AliasTarget:
+            HostedZoneId: !Ref HostedZoneId
+            DNSName: !GetAtt WWWCloudFront.DomainName
