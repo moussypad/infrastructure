@@ -115,7 +115,7 @@ Resources:
       HostedZoneId: !Ref HostedZoneId
       RecordSets:
         - 
-          Name: !Ref DomainName
+          Name: !Sub ${DomainName}.
           Type: A
           AliasTarget:
             HostedZoneId: !Ref HostedZoneId
